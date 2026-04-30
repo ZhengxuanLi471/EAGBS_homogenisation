@@ -1,19 +1,14 @@
+# Reads Neper PLY tessellations and serialises them to tessellation_output.json.
 import numpy as np
 import json
 
 def read_ply_tessellation(filename):
-    """
-    Reads a 2D Neper tessellation in PLY format and produces:
-        pts     = list of (x,y)
-        regions = list of tuples of vertex indices (1-based), CCW order
-    """
+    """Parse a 2D Neper PLY file into pts (list of (x,y)) and regions (CCW vertex index tuples)."""
 
     with open(filename, 'r') as f:
         lines = f.readlines()
 
-    # ---------------------------
-    # 1. Parse header
-    # ---------------------------
+    # --- parse header ---
     n_vertices = 0
     n_faces = 0
     n_cells = 0
@@ -28,17 +23,13 @@ def read_ply_tessellation(filename):
         i += 1
     header_end = i + 1
 
-    # ---------------------------
-    # 2. Read vertices
-    # ---------------------------
+    # --- vertices ---
     pts_all = []
     for j in range(n_vertices):
         x, y, z = map(float, lines[header_end + j].split())
         pts_all.append((x, y))  # ignore z (always 0)
 
-    # ---------------------------
-    # 3. Read faces (list of vertex indices)
-    # ---------------------------
+    # --- faces ---
     faces_start = header_end + n_vertices
     faces = []
     for j in range(n_faces):
@@ -47,9 +38,7 @@ def read_ply_tessellation(filename):
         verts = parts[1:1+k]  # 0-based indices
         faces.append(verts)
 
-    # ---------------------------
-    # 4. Read cells (list of face indices)
-    # ---------------------------
+    # --- cells ---
     cells_start = faces_start + n_faces
     cells = []
     for j in range(n_cells):
@@ -58,9 +47,7 @@ def read_ply_tessellation(filename):
         face_ids = parts[1:1+k]
         cells.append(face_ids)
 
-    # ---------------------------
-    # 5. For each cell, build its outer polygon
-    # ---------------------------
+    # --- build CCW polygon per cell ---
     regions = []
 
     for face_ids in cells:

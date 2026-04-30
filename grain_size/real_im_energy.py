@@ -1,16 +1,5 @@
-# =============================================================================
-# Seed Sweep for Frequency-Dependent Complex Stiffness (Energy-Based)
-# -----------------------------------------------------------------------------
-# - Loads each tessellation seed, builds the mixed FE spaces, and enforces
-#   periodic/corner constraints from meshes.py.
-# - Sweeps ln(omega) for shear, normal-x, and normal-y macro loads, adapting
-#   frequencies when the mixed solver struggles to converge.
-# - Records homogenized real/imag stiffness components into per-seed CSV files
-#   using energy-based calculation.
-#
-# Author: Zhengxuan Li
-# Updated: 27 Jan 2026
-# =============================================================================
+# Frequency sweep driver: computes complex shear and normal stiffness for each
+# tessellation seed and saves per-seed CSVs.
 
 
 from main import solve_rve, build_spaces
@@ -177,7 +166,6 @@ def run_branch(Gamma, gamma_tag, mesh, spaces, contact_pairs, outer_contact_pair
     return mesh  # Return potentially updated mesh
 
 
-# Load tessellation data
 with open("tessellation_output.json", "r") as f:
     data = json.load(f)
 
@@ -237,7 +225,6 @@ for seed in seeds:
     )
     gb_tangent_indices = spaces[4]
 
-    # Run all three loading branches
     mesh = run_branch(((0, 1), (0, 0)), "shear", mesh, spaces, contact_pairs,
                       outer_contact_pairs, corner_penalty_label, gb_tangent_indices,
                       num_grains, seedname)

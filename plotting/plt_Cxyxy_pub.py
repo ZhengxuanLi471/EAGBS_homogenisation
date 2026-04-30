@@ -1,12 +1,4 @@
-# =============================================================================
-# Publication Figure: Re(C_xyxy) and Im(C_xyxy) across sigma levels
-# -----------------------------------------------------------------------------
-# Two-panel figure (a, b) showing averaged shear modulus components
-# across different grain-size distribution widths (sigma).
-#
-# Author: Zhengxuan Li
-# Updated: 6 Mar 2026
-# =============================================================================
+# Plots ensemble-averaged G'(ω) and G''(ω) across grain-size distribution widths.
 
 import os
 import re

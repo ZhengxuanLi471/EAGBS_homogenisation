@@ -1,21 +1,9 @@
-# =============================================================================
-# Log-Normal η Distribution Sweep: Attenuation Spectrum Evolution
-# -----------------------------------------------------------------------------
-# Assigns log-normal distributed viscosities η_gb across grain boundaries,
-# then progressively shrinks the distribution width σ_η while keeping the
-# geometric mean fixed. This demonstrates the transition from a broad,
-# low-amplitude attenuation feature to a tall, narrow Debye-like peak.
-#
-# The script also bins boundaries by viscosity and computes their individual
-# contributions to the total dissipation.
+# Sweeps σ_η (log-normal GB viscosity distribution width) and ω for one seed,
+# recording total and per-bin dissipation at each (σ_η, ω) pair.
 #
 # Usage:
-#   conda activate ngsolve
 #   python run_eta_sweep.py --seed 1 --sigma-values 3.0 1.5 0.5 0.1
 #   python run_eta_sweep.py --seed 1 --sigma-min 0.1 --sigma-max 3.0 --sigma-steps 10
-#
-# Author: Zhengxuan Li
-# =============================================================================
 
 from main import solve_rve, build_spaces
 from meshes import MakeMesh
@@ -32,7 +20,7 @@ from collections import defaultdict
 
 SetNumThreads(8)
 
-# ── Physical parameters ─────────────────────────────────────────────────────
+# --- physical parameters ---
 NU = 0.35
 MU = 1.0
 MACRO_SCALE = 1e-3
@@ -44,31 +32,10 @@ OMEGA_SAMPLES = 100
 N_VISCOSITY_BINS = 10
 
 
-# ── Log-normal viscosity distribution ───────────────────────────────────────
+# --- viscosity distribution ---
 
 def generate_lognormal_viscosities(contact_pairs, sigma, geo_mean_eta=1.0, seed=None):
-    """
-    Generate log-normal distributed viscosity factors for each grain boundary.
-    
-    Parameters
-    ----------
-    contact_pairs : dict
-        Dictionary of grain boundary pairs {(i,j): (left_name, right_name)}
-    sigma : float
-        Standard deviation of ln(η). Controls distribution width.
-        σ ≈ 2.3 gives ~2 orders of magnitude across ±1σ
-        σ ≈ 3.5 gives ~3 orders of magnitude across ±1σ
-    geo_mean_eta : float
-        Desired geometric mean of the η distribution (kept fixed as σ varies).
-        Geometric mean = exp(μ) for log-normal.
-    seed : int or None
-        Random seed for reproducibility
-    
-    Returns
-    -------
-    gb_viscosity_map : dict
-        Maps (i,j) -> viscosity factor
-    """
+    """Draw log-normal η_gb values; geometric mean fixed at geo_mean_eta, width controlled by sigma."""
     if seed is not None:
         np.random.seed(seed)
     
@@ -78,12 +45,7 @@ def generate_lognormal_viscosities(contact_pairs, sigma, geo_mean_eta=1.0, seed=
         # Essentially uniform: all boundaries have geo_mean_eta
         return {key: geo_mean_eta for key in contact_pairs.keys()}
     
-    # For log-normal: if X = exp(μ + σZ) where Z~N(0,1),
-    # then geometric mean = exp(μ)
-    # To achieve geometric mean = geo_mean_eta, set μ = ln(geo_mean_eta)
-    mu = np.log(geo_mean_eta)
-    
-    # Generate log-normal samples
+    mu = np.log(geo_mean_eta)  # geometric mean = exp(μ) for log-normal
     Z = np.random.randn(n_boundaries)
     eta_values = np.exp(mu + sigma * Z)
     
@@ -95,18 +57,7 @@ def generate_lognormal_viscosities(contact_pairs, sigma, geo_mean_eta=1.0, seed=
 
 
 def bin_viscosities(gb_viscosity_map, n_bins=N_VISCOSITY_BINS):
-    """
-    Assign each boundary to a viscosity bin (log-spaced).
-    
-    Returns
-    -------
-    bin_edges : array
-        Log-spaced bin edges
-    boundary_bins : dict
-        Maps (i,j) -> bin index
-    bin_boundaries : dict
-        Maps bin_index -> list of (i,j) keys
-    """
+    """Assign each boundary to a log-spaced viscosity bin."""
     eta_values = np.array(list(gb_viscosity_map.values()))
     eta_min = max(eta_values.min(), 1e-10)
     eta_max = eta_values.max()
@@ -126,19 +77,11 @@ def bin_viscosities(gb_viscosity_map, n_bins=N_VISCOSITY_BINS):
     return bin_edges, boundary_bins, dict(bin_boundaries)
 
 
-# ── Dissipation computation by boundary and bin ─────────────────────────────
+# --- dissipation ---
 
 def compute_dissipation_by_boundary(gfu, mesh, contact_pairs, gb_tangent_indices,
                                     gb_viscosity_map, omega, area):
-    """
-    Compute dissipation contribution from each individual grain boundary.
-    
-    Returns
-    -------
-    boundary_dissipation : dict
-        Maps (i,j) -> dissipation contribution
-    total_dissipation : float
-    """
+    """Return per-boundary and total dissipation from the FE solution."""
     boundary_dissipation = {}
     
     for (a, b), (_, right_name) in contact_pairs.items():
@@ -162,14 +105,7 @@ def compute_dissipation_by_boundary(gfu, mesh, contact_pairs, gb_tangent_indices
 
 
 def compute_binned_dissipation(boundary_dissipation, bin_boundaries, n_bins):
-    """
-    Aggregate dissipation by viscosity bin.
-    
-    Returns
-    -------
-    bin_dissipation : dict
-        Maps bin_index -> total dissipation from boundaries in that bin
-    """
+    """Sum boundary dissipation values into each viscosity bin."""
     bin_dissipation = {}
     for bin_idx in range(n_bins):
         boundaries = bin_boundaries.get(bin_idx, [])
@@ -179,37 +115,27 @@ def compute_binned_dissipation(boundary_dissipation, bin_boundaries, n_bins):
     return bin_dissipation
 
 
-# ── Run sweep for a single sigma value ──────────────────────────────────────
+# --- sweep ---
 
 def run_sigma_sweep(mesh, spaces, contact_pairs, outer_contact_pairs,
                     corner_penalty_label, gb_tangent_indices,
                     Gamma, sigma, geo_mean_eta, viscosity_seed,
                     output_dir, ln_omega_min, ln_omega_max, omega_samples,
                     seedname, load_tag):
-    """
-    Run frequency sweep for a given σ_η value.
-    """
+    """Run frequency sweep for one σ_η value and save results."""
     print(f"\n{'─'*60}")
     print(f"σ_η = {sigma:.3f} (geometric mean η = {geo_mean_eta:.3f})")
     print(f"{'─'*60}")
     
-    # Generate viscosity distribution
     gb_viscosity_map = generate_lognormal_viscosities(
         contact_pairs, sigma, geo_mean_eta, seed=viscosity_seed
     )
-    
-    # Report distribution statistics
     eta_values = np.array(list(gb_viscosity_map.values()))
-    print(f"  η distribution: min={eta_values.min():.4e}, max={eta_values.max():.4e}")
-    print(f"  η distribution: mean={eta_values.mean():.4f}, std={eta_values.std():.4f}")
-    print(f"  η distribution: log-std={np.std(np.log(eta_values)):.4f}")
-    
-    # Bin the viscosities
+    print(f"  η: min={eta_values.min():.4e}, max={eta_values.max():.4e}, log-std={np.std(np.log(eta_values)):.4f}")
+
     bin_edges, boundary_bins, bin_boundaries = bin_viscosities(
         gb_viscosity_map, N_VISCOSITY_BINS
     )
-    
-    # Report bin populations
     print(f"  Bin populations: ", end="")
     for bi in range(N_VISCOSITY_BINS):
         print(f"bin{bi}:{len(bin_boundaries.get(bi, []))} ", end="")

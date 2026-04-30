@@ -1,16 +1,5 @@
-# =============================================================================
-# Tessellated RVE Geometry Builder
-# -----------------------------------------------------------------------------
-# - Reconstructs multi-grain RVEs, tracks shared edges, and labels internal
-#   interfaces with core/slide segments for grain-boundary mechanics.
-# - Detects periodic outer counterparts, attaches displacement metadata, and
-#   emits ContactBoundary-ready prefixes for solver pairing.
-# - Marks special corner segments, applies local mesh sizes, and returns
-#   contact_maps plus fully initialized NGSolve meshes.
-#
-# Author: Zhengxuan Li
-# Updated: 2 Dec 2025
-# =============================================================================
+# Tessellated RVE geometry builder: labels grain-boundary core/slide segments,
+# detects periodic pairs, and returns NGSolve meshes with ContactBoundary metadata.
 
 
 import numpy as np

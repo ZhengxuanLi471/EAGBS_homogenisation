@@ -1,18 +1,5 @@
-# =============================================================================
-# Complex EAGBS Solver with Per-Boundary Viscosity Support
-# -----------------------------------------------------------------------------
-# - Modified version supporting individual viscosity factors for each grain
-#   boundary, enabling log-normal or arbitrary viscosity distributions.
-# - Constructs the coupled displacement/multiplier spaces for grain cores,
-#   sliding interfaces, and periodic outer faces.
-# - Assembles elasticity, grain-boundary, and macro-load contributions with
-#   optional Nitsche penalties for anchoring periodic corners.
-# - Solves the saddle system with Pardiso or CG (MUMPS-backed) and reports the
-#   relative residual for convergence control.
-#
-# Author: Zhengxuan Li
-# Updated: March 2026
-# =============================================================================
+# EAGBS mixed FE solver with per-boundary viscosity: each grain boundary accepts
+# an individual η factor, enabling arbitrary viscosity distributions.
 
 from ngsolve import *
 import numpy as np

@@ -1,3 +1,5 @@
+# Fits the distributed-viscosity EAGBS reduced-order model to surface-wave
+# velocity data (Priestley 2024) anchored to dry olivine experiments.
 
 import argparse
 import re
@@ -19,9 +21,9 @@ mpl.rcParams.update({
     "mathtext.fontset": "cm",
 })
 
-# ============================================================
+# ---
 # User settings
-# ============================================================
+# ---
 DATA_FILE = "keith.dat"
 
 DELTA = 0.28
@@ -36,18 +38,18 @@ N_SIGMA_DIST = 6
 LOW_T_CUTOFF = 900.0
 SIGMA_DEPTH = 50.0
 
-# ============================================================
+# ---
 # Constants
-# ============================================================
+# ---
 R_GAS = 8.314462618
 RHO0 = 3213.0
 ALPHA = 4.07e-5
 KT_GPA = 115.0
 G_MS2 = 9.81
 
-# ============================================================
+# ---
 # Parsing
-# ============================================================
+# ---
 _LINE_RE = re.compile(
     r"^\s*\d+\s+Keith depth=\s*([0-9.]+)\s*km,\s*T=\s*([0-9.]+)\s*Vs=([0-9.]+)\s*km s-1"
 )
@@ -65,7 +67,7 @@ def read_keith_dat(path: str) -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=["depth_km", "T_C", "Vs_kms"])
     return df.sort_values(["depth_km", "T_C"]).reset_index(drop=True)
 
-# ============================================================
+# ---
 # Self-consistent pressure from density
 #
 # rho(T, P) = RHO0 * (1 - ALPHA*T + P/KT_GPA)
@@ -73,7 +75,7 @@ def read_keith_dat(path: str) -> pd.DataFrame:
 #   P(z) = (a/b) * (exp(b*z) - 1)
 # where a = RHO0*(1 - ALPHA*T)*g  [Pa/m]
 #       b = RHO0*g / (KT_GPA*1e9) [1/m]
-# ============================================================
+# ---
 def pressure_from_depth_km(depth_km, T_C):
     z_m = np.asarray(depth_km, dtype=float) * 1e3
     T_C = np.asarray(T_C, dtype=float)
@@ -81,9 +83,9 @@ def pressure_from_depth_km(depth_km, T_C):
     b = RHO0 * G_MS2 / (KT_GPA * 1e9)
     return (a / b) * (np.exp(b * z_m) - 1.0) / 1e9  # GPa
 
-# ============================================================
+# ---
 # Model
-# ============================================================
+# ---
 def mu_GPa(T_C, P_GPa, mu0_GPa, dmu_dT_GPa_per_C, dmu_dP):
     return mu0_GPa + dmu_dT_GPa_per_C * np.asarray(T_C) + dmu_dP * np.asarray(P_GPa)
 
@@ -153,9 +155,9 @@ def qinv_vectorized(T_C, depth_km, params, period_s=PERIOD_S):
         out[i] = qinv_one(Ti, zi, params, period_s)
     return out
 
-# ============================================================
+# ---
 # Fitting
-# ============================================================
+# ---
 def residuals_full(x, df):
     pred = vs_dispersed_vectorized(df["T_C"].to_numpy(), df["depth_km"].to_numpy(), x)
     return pred - df["Vs_kms"].to_numpy()
@@ -216,9 +218,9 @@ def summarize_fit(df, x_best):
             f.write(f"depth = {depth:5.1f} km : RMSE = {rmse_d:.6f} km/s\n")
     print("\nSaved fit_params_selfP.txt")
 
-# ============================================================
+# ---
 # Plot
-# ============================================================
+# ---
 def plot_fit(df, x_best, extend=False):
     T_max = 2500.0 if extend else df["T_C"].max()
 
@@ -285,9 +287,9 @@ def plot_fit(df, x_best, extend=False):
     plt.savefig("fitted_selfP.png", dpi=300)
     print("\nSaved: fitted_selfP.png")
 
-# ============================================================
+# ---
 # Main
-# ============================================================
+# ---
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--extend", action="store_true",

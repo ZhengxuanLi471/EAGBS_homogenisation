@@ -1,16 +1,9 @@
-# =============================================================================
-# Compute Grain Boundary Lengths for Each Seed
-# -----------------------------------------------------------------------------
-# Builds the mesh from each tessellation seed, measures the length of every
-# grain boundary (slide segment), and saves the results.  This is a lightweight
-# post-processing step (no FE solve), so it runs quickly.
+# Measures grain-boundary lengths per seed and adds them to the viscosity_info
+# JSONs produced by run_eta_sweep.py (no FE solve needed).
 #
 # Usage:
 #   python compute_gb_lengths.py --seed 1
-#   python compute_gb_lengths.py --seed 1 --seed-end 100   (loop over seeds)
-#
-# Author: Zhengxuan Li
-# =============================================================================
+#   python compute_gb_lengths.py --seed 1 --seed-end 100
 
 from meshes import MakeMesh
 from ngsolve import Integrate, BND
@@ -78,7 +71,6 @@ def process_seed(seed, tess_json, results_dir):
     gb_lengths = compute_boundary_lengths(mesh, contact_pairs)
     print(f"{len(gb_lengths)} boundaries, total L = {sum(gb_lengths.values()):.4f}")
 
-    # --- For every sigma that was run, load viscosity_info, add lengths ----
     import glob
     visc_files = sorted(glob.glob(
         os.path.join(results_dir, f"{seedname}_sigma_*_viscosity_info.json")))

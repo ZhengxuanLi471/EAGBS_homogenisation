@@ -1,14 +1,5 @@
-# =============================================================================
-# Hexagonal Benchmark: Complex Stiffness vs Frequency
-# -----------------------------------------------------------------------------
-# - Builds the hexagonal tessellation, scales it to the grain area target,
-#   and reuses the shared space/solver pipeline.
-# - Sweeps ln(omega) for shear and normal load cases, generating VTU snapshots
-#   CSV exports that act as regression baselines.
-#
-# Author: Zhengxuan Li
-# Updated: 2 Dec 2025
-# =============================================================================
+# Hexagonal benchmark: regular 6-grain RVE swept over frequency as a validation
+# reference against the analytical Ghahremani (1980) result.
 
 
 from main import solve_rve,build_spaces
@@ -82,8 +73,6 @@ def run_branch(Gamma, gamma_tag):
 
     storage_vals = []
     diss_total_vals = []
-    diss_bulk_vals = []
-    diss_gb_vals = []
 
     for j in range(len(ln_omega)):
         omegai = np.exp(ln_omega[j])
@@ -132,44 +121,6 @@ def run_branch(Gamma, gamma_tag):
         )
         storage_vals.append(storage)
         diss_total_vals.append(total_diss)
-
-        # Compute energy density fields for VTU output
-        uR = gfu.components[0]
-        uI = gfu.components[1]
-        lam = 2 * MU * NU / (1 - 2 * NU)
-        epsR = strain(uR)
-        epsI = strain(uI)
-        sigR = stress(uR, lam, MU)
-        sigI = stress(uI, lam, MU)
-        storage_density = 0.5 * (InnerProduct(sigR, epsR) + InnerProduct(sigI, epsI))
-
-        # Build dissipation density: project boundary traction data onto GridFunction for VTU output
-        # Create GridFunction on H1 space to store dissipation density (zero in bulk)
-        fes_scalar = H1(mesh, order=1)
-        gf_diss = GridFunction(fes_scalar)
-        gf_diss.vec[:] = 0  # Initialize to zero everywhere
-        
-        # For each GB, compute and add dissipation density on boundary DOFs
-        for (a, b), (_, right_name) in contact_pairs.items():
-            idx_re, idx_im = gb_tangent_indices[(a, b)]
-            t_s_re = gfu.components[idx_re]
-            t_s_im = gfu.components[idx_im]
-            magnitude_sq_s = t_s_im * t_s_im + t_s_re * t_s_re
-            gb_diss_density = 0.5 * ETA_RATIO * magnitude_sq_s / omegai
-            boundary_region = mesh.Boundaries(f"slide_{right_name}")
-            # Create temp GridFunction to hold this GB's contribution, then add to total
-            gf_temp = GridFunction(fes_scalar)
-            gf_temp.Set(gb_diss_density, definedon=boundary_region)
-            gf_diss.vec.data += gf_temp.vec
-
-        vtkout = VTKOutput(
-            mesh,
-            coefs=[gfu.components[0], gfu.components[1], storage_density, gf_diss],
-            names=['real_deformation', 'imag_deformation', 'storage_density', 'dissipation_density'],
-            filename="{}_{:.2f}".format(gamma_tag, ln_omega[j]),
-            subdivision=2,
-        )
-        #vtkout.Do()
 
     omega_vals = np.exp(ln_omega)
     modulus_scale = 2.0 / (MACRO_SCALE ** 2)
@@ -251,7 +202,6 @@ spaces = build_spaces(
 )
 gb_tangent_indices = spaces[4]
 
-# Tag used to prefix outputs based on CLI arg
 core_frac_tag = (sys.argv[1] if len(sys.argv) > 1 else "0.01")
 
 run_branch(((0,1), (0, 0)), "shear")

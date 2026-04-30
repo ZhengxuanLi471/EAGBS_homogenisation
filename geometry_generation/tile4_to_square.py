@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-"""Build a non-periodic square domain from a 2D periodic Neper tessellation.
-
-The script tiles a periodic input PLY across a small grid (default 2x2), recenters
-it at the origin, and clips a target square (default area=1, i.e. side length 1).
-This preserves polygon topology by clipping against the target square before
-rebuilding vertices/faces and writing a new Neper-style PLY file.
-"""
+# Tiles a periodic Neper PLY across a 2×2 grid, clips to a unit square, and
+# writes a new Neper-style PLY for use as a non-periodic RVE.
 from __future__ import annotations
 
 import argparse

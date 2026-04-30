@@ -1,18 +1,5 @@
-# =============================================================================
-# Complex EAGBS Solver
-# -----------------------------------------------------------------------------
-# - Constructs the coupled displacement/multiplier spaces for grain cores,
-#   sliding interfaces, and periodic outer faces.
-# - Assembles elasticity, grain-boundary, and macro-load contributions with
-#   optional Nitsche penalties for anchoring periodic corners.
-# - Solves the saddle system with Pardiso or CG (MUMPS-backed) and reports the
-#   relative residual for convergence control.
-# - Provides build_spaces(...) and solve_rve(...) entry points consumed by all
-#   driver scripts in this repository.
-#
-# Author: Zhengxuan Li
-# Updated: 2 Dec 2025
-# =============================================================================
+# EAGBS mixed FE solver: assembles and solves the coupled displacement/multiplier
+# system for one RVE under a prescribed macro loading tensor.
 
 from ngsolve import *
 import numpy as np
@@ -119,7 +106,6 @@ def _add_outer_terms(
         plus_prefix = plus_info["prefix"]
         edge = key
         region = "slide" if sliding else "core"
-        #print('key=',key,' minus_prefix=',minus_prefix,' plus_prefix=',plus_prefix,' region=',region)
 
         displacement = data.get("displacement")
         disp_norm = None
@@ -131,8 +117,7 @@ def _add_outer_terms(
                 disp_norm = None
 
         # Tighten pairing search radius to the expected periodic shift plus a small tolerance.
-        maxdist_value = float(disp_norm + 1e-2) #if disp_norm is not None else 1e9
-        #print('maxdist_value=',maxdist_value)
+        maxdist_value = float(disp_norm + 1e-2)
 
         r_s_Re = sym.__dict__[f"r_{edge}_s_Re"]
         r_s_Im = sym.__dict__[f"r_{edge}_s_Im"]
@@ -324,7 +309,7 @@ def _solve(a, f, fes, solver, rtol):
         convergence = bool(rel_residual < rtol)
         return gfu, convergence
 
-# --- Main function ---------------------------------
+# --- public API ---
 def build_spaces(mesh, contact_pairs, outer_contact_pairs=None, order_bulk=2, order_gb=1):
     """Construct the block mixed space holding bulk fields and GB/outer multipliers."""
     # Bulk displacement: no strong Dirichlet; corners handled by Nitsche
@@ -428,10 +413,7 @@ def build_spaces(mesh, contact_pairs, outer_contact_pairs=None, order_bulk=2, or
     sym = SimpleNamespace(**sym_dict)
     print(f"Constructed finite element space with",fes.ndof," dofs.")
 
-    # Build a name->index map so downstream code can grab multipliers safely
     trial_index = {name: idx for idx, name in enumerate(name_order_trial)}
-
-    # Precompute tangential multiplier indices per contact pair
     gb_tangent_indices = {}
     for (a, b) in contact_pairs.keys():
         key = (a, b)
@@ -479,10 +461,7 @@ def solve_rve(spaces, mesh, contact_pairs, outer_contact_pairs,
     disp = CoefficientFunction((x, y))
     CF_u = Gamma * disp
 
-    # Nitsche corner enforcement on LB|LT|RB
     _add_corner_penalty(a, f, mesh, sym, CF_u, corner_bnd)
-
-    # Solve (no special handling of corners needed now)
     gfu, convergence = _solve(a, f, fes, solver, rtol)
 
     return gfu, mesh, convergence

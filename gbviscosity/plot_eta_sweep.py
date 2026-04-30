@@ -1,22 +1,8 @@
-# =============================================================================
-# Plot Attenuation Spectra and Binned Contributions for η Distribution Sweep
-# -----------------------------------------------------------------------------
-# Visualizes the evolution of attenuation spectra as the log-normal viscosity
-# distribution width σ_η shrinks from broad (2-3 orders of magnitude) to
-# narrow (Debye-like peak).
-#
-# Produces:
-#   1. Overlay plot: C_imag(ω) for all σ values showing broad → narrow transition
-#   2. Stacked area plots: Binned contributions for each σ value
-#   3. Waterfall/3D visualization of spectrum evolution
-#   4. Peak analysis: Height and width vs σ
+# Plots attenuation spectra and binned contributions from the η distribution sweep.
 #
 # Usage:
 #   python plot_eta_sweep.py --results-dir eta_sweep_results
 #   python plot_eta_sweep.py --results-dir eta_sweep_results --seedname seeds_1
-#
-# Author: Zhengxuan Li
-# =============================================================================
 
 import os
 import json

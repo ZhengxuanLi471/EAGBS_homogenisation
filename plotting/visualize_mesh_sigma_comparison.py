@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""
-Side-by-side mesh tessellation comparison: small σ vs large σ.
-Loads tessellation_output.json from /raid2/zl471/eagbs/sigmas/sigma_0.05
-and sigma_0.5, shows grain boundaries on both panels.
-"""
+# Side-by-side tessellation comparison: σ_a = 0.05 vs 0.5.
 
 import json
 import os

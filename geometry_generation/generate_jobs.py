@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
+# Prints bash commands to generate Neper tessellations for all σ_a levels.
 import math
 import os
 
-# lognormal shape parameters
-siglist = [0.05,0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50]
+siglist = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
 
 # convert lognormal sigma -> coefficient of variation
 def sigin(sigma):
@@ -16,19 +16,12 @@ for sig in siglist:
     sig_in = sigin(sig)
     dirname = f"sigma_{sig}"
 
-    # ---------------------------
-    # Create directory
-    # ---------------------------
     print(f"mkdir -p {dirname}")
     print(f"cd {dirname}")
-
-    # Copy helper scripts
     print("cp ../tile4_to_square.py .")
     print("cp ../read.py .")
 
-    # ---------------------------
-    # Generate tessellations
-    # ---------------------------
+    # --- generate tessellations ---
     print(f"echo '=== [{dirname}] Starting tessellation generation ==='")
     for seed in range(1, n_tess + 1):
         print(f"echo '[{dirname}] Generating tessellation seed {seed}/{n_tess}'")
@@ -49,9 +42,7 @@ for sig in siglist:
         ]
         print(" \\\n  ".join(parts) + " > /dev/null 2>&1")
 
-    # ---------------------------
-    # Visualisation
-    # ---------------------------
+    # --- visualise ---
     print(f"echo '=== [{dirname}] Starting visualisation ==='")
     for seed in range(1, n_tess + 1):
         print(f"echo '[{dirname}] Visualising seed {seed}/{n_tess}'")
@@ -63,9 +54,7 @@ for sig in siglist:
             ]) + " > /dev/null 2>&1"
         )
 
-    # ---------------------------
-    # Post-process to square tile
-    # ---------------------------
+    # --- post-process to square ---
     print(f"echo '=== [{dirname}] Starting post-processing ==='")
     for seed in range(1, n_tess + 1):
         print(f"echo '[{dirname}] Post-processing seed {seed}/{n_tess}'")
