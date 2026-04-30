@@ -131,7 +131,7 @@ Reads `keith.dat` (included) and outputs best-fit parameters and figures.
 
 ---
 
-### Step 5 — Publication Figures
+### Step 5 — Other figure plotting codes
 
 ```bash
 cd plotting
